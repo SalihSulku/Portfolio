@@ -13,6 +13,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onOpenCV }) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,15 +27,41 @@ export const ContactView: React.FC<ContactViewProps> = ({ onOpenCV }) => {
     setTimeout(() => setCopiedField(null), 2500);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
 
     setIsSending(true);
-    setTimeout(() => {
+    setSendError(null);
+
+    try {
+      const response = await fetch('https://formsubmit.co/ajax/salihsul27@gmail.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          _subject: `[Portföy Mesajı] ${formData.subject} - ${formData.name}`,
+          _template: 'table',
+          _captcha: 'false'
+        })
+      });
+
+      if (response.ok) {
+        setFormSubmitted(true);
+      } else {
+        throw new Error('Gönderim sırasında bir hata oluştu');
+      }
+    } catch {
+      setSendError('Doğrudan form gönderiminde bir ağ sorunu oluştu. Lütfen aşağıdaki butona tıklayarak doğrudan e-posta programınızla gönderin.');
+    } finally {
       setIsSending(false);
-      setFormSubmitted(true);
-    }, 700);
+    }
   };
 
   return (
@@ -278,6 +305,19 @@ export const ContactView: React.FC<ContactViewProps> = ({ onOpenCV }) => {
                     className="w-full px-3 py-2 rounded-none bg-stone-50 border border-stone-300 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-orange-600 resize-none"
                   />
                 </div>
+
+                {sendError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-xs text-red-700 space-y-2">
+                    <p>{sendError}</p>
+                    <a
+                      href={`mailto:salihsul27@gmail.com?subject=${encodeURIComponent(formData.subject || 'İletişim')}&body=${encodeURIComponent(`Ad Soyad: ${formData.name}\nE-posta: ${formData.email}\n\nMesaj:\n${formData.message}`)}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white font-bold text-[11px] hover:bg-red-700 transition-colors"
+                    >
+                      <Mail className="w-3 h-3" />
+                      E-Posta Programıyla Gönder
+                    </a>
+                  </div>
+                )}
 
                 <button
                   type="submit"

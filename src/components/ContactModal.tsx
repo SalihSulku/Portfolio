@@ -22,6 +22,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -29,20 +30,48 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
     setTimeout(() => setCopiedField(null), 2500);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
     
     setIsSubmitting(true);
-    setTimeout(() => {
+    setSubmitError(null);
+
+    try {
+      const response = await fetch('https://formsubmit.co/ajax/salihsul27@gmail.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || 'Belirtilmedi',
+          subject: formData.subject || 'Portföy İletişim',
+          message: formData.message,
+          _subject: `[Portföy İletişim] ${formData.subject || 'Yeni Mesaj'} - ${formData.name}`,
+          _template: 'table',
+          _captcha: 'false'
+        })
+      });
+
+      if (response.ok) {
+        setIsSuccess(true);
+      } else {
+        throw new Error('Gönderim hatası');
+      }
+    } catch {
+      setSubmitError('Doğrudan form gönderiminde bir ağ sorunu oluştu. Lütfen e-posta programınızla gönderin.');
+    } finally {
       setIsSubmitting(false);
-      setIsSuccess(true);
-    }, 700);
+    }
   };
 
   const resetForm = () => {
     setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     setIsSuccess(false);
+    setSubmitError(null);
   };
 
   if (!isOpen) return null;
@@ -278,6 +307,19 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                     className="w-full px-3 py-2 rounded-none bg-white border border-stone-300 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-orange-600 resize-none"
                   />
                 </div>
+
+                {submitError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-xs text-red-700 space-y-2">
+                    <p>{submitError}</p>
+                    <a
+                      href={`mailto:salihsul27@gmail.com?subject=${encodeURIComponent(formData.subject || 'İletişim')}&body=${encodeURIComponent(`Ad Soyad: ${formData.name}\nE-posta: ${formData.email}\nTelefon: ${formData.phone || 'Belirtilmedi'}\n\nMesaj:\n${formData.message}`)}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white font-bold text-[11px] hover:bg-red-700 transition-colors"
+                    >
+                      <Mail className="w-3 h-3" />
+                      E-Posta Programıyla Gönder
+                    </a>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-end gap-2 pt-1">
                   <button
